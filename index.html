@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BaliLoop | Circular Economy Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --primary: #0f2b21;
+  --primary-mid: #1a4731;
+  --primary-light: #10b981;
+  --accent: #d4a373;
+  --accent-light: #faedcd;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { display: grid; grid-template-columns: 280px 1fr; grid-template-rows: 70px 1fr; min-height: 100vh; }
+
+/* TOPBAR */
+.topbar {
+  grid-column: 1 / 3;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.logo { font-size: 22px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+.logo i { color: var(--primary-light); font-size: 24px; }
+.logo span { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.role-switcher { margin-left: auto; display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
+.role-btn {
+  background: transparent; border: none; color: var(--text-muted); padding: 8px 16px; border-radius: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;
+}
+.role-btn:hover { color: var(--primary); background: rgba(16, 185, 129, 0.05); }
+.role-btn.active { background: var(--primary); color: #fff; box-shadow: var(--shadow); }
+
+.lang-toggle {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px;
+  border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: 0.2s;
+}
+.lang-toggle:hover { border-color: var(--primary-light); color: var(--primary); }
+
+.user-info { display: flex; align-items: center; gap: 12px; padding-left: 24px; border-left: 1px solid var(--border); }
+.avatar {
+  width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #b08968);
+  display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px;
+}
+.user-meta { display: flex; flex-direction: column; }
+.user-name { font-weight: 700; font-size: 13px; color: var(--text); }
+.user-role { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--card); border-right: 1px solid var(--border); padding: 24px 16px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.nav-group { margin-bottom: 8px; }
+.nav-title { padding: 0 12px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: var(--text-muted); cursor: pointer;
+  border-radius: 10px; transition: all 0.2s ease; font-size: 13.5px; font-weight: 500;
+}
+.nav-item:hover { background: var(--bg); color: var(--primary); }
+.nav-item.active { background: rgba(16, 185, 129, 0.08); color: var(--primary-mid); font-weight: 600; }
+.nav-item i { width: 20px; text-align: center; font-size: 15px; }
+
+/* MAIN */
+.main { padding: 32px; overflow-y: auto; background: var(--bg); }
+.page { display: none; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.page.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+.page-header { margin-bottom: 28px; }
+.page-title { font-size: 26px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+.page-subtitle { color: var(--text-muted); margin-top: 6px; font-size: 15px; font-weight: 400; }
+
+/* GRID & CARDS */
+.grid { display: grid; gap: 20px; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media(max-width: 1200px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width: 768px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .sidebar { display: none; } /* Simplified for mobile demo */
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .topbar { padding: 0 16px; gap: 12px; flex-wrap: wrap; }
+  .role-switcher { margin-left: 0; width: 100%; overflow-x: auto; }
+}
+
+.card {
+  background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover { box-shadow: var(--shadow); }
+.card-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; color: var(--primary); }
+
+.stat-card {
+  background: var(--card); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border); position: relative; overflow: hidden; transition: 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.stat-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary-light), var(--accent)); }
+.stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+.stat-value { font-size: 28px; font-weight: 800; color: var(--primary); margin: 8px 0; letter-spacing: -0.5px; }
+.stat-change { font-size: 12px; color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.stat-icon {
+  position: absolute; top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(16, 185, 129, 0.1); color: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+
+/* BADGES & BUTTONS */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+.badge-success { background: rgba(16, 185, 129, 0.1); color: #047857; }
+.badge-warning { background: rgba(245, 158, 11, 0.1); color: #92400e; }
+.badge-danger { background: rgba(239, 68, 68, 0.1); color: #991b1b; }
+.badge-info { background: rgba(59, 130, 246, 0.1); color: #1e40af; }
+
+.btn {
+  padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 13px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-mid); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: #e2e8f0; }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: #b08968; }
+.btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 8px; }
+
+/* SPECIFIC COMPONENTS */
+.bin-card { background: var(--card); border-radius: 14px; padding: 18px; border: 1px solid var(--border); transition: 0.2s; }
+.bin-card:hover { border-color: var(--primary-light); }
+.bin-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.bin-name { font-weight: 700; font-size: 15px; color: var(--text); }
+.bin-loc { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.progress { height: 6px; background: var(--bg); border-radius: 10px; overflow: hidden; margin: 12px 0; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary-light), var(--primary)); border-radius: 10px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.progress-bar.high { background: linear-gradient(90deg, var(--warning), var(--danger)); }
+.bin-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.bin-icon {
+  width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; flex-shrink: 0;
+}
+.bin-icon.glass { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.bin-icon.plastic { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.bin-icon.fabric { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+.bin-icon.soap { background: linear-gradient(135deg, #f472b6, #ec4899); }
+
+table { width: 100%; border-collapse: separate; border-spacing: 0; }
+th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+th { background: transparent; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(16, 185, 129, 0.02); }
+
+.marketplace-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.product-card {
+  background: var(--card); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+}
+.product-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--primary-light); }
+.product-img {
+  height: 160px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); display: flex; align-items: center;
+  justify-content: center; color: var(--primary); font-size: 48px; position: relative;
+}
+.product-badge {
+  position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px);
+  color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
+  box-shadow: var(--shadow-sm);
+}
+.product-info { padding: 18px; }
+.product-name { font-weight: 700; margin-bottom: 4px; font-size: 15px; color: var(--text); }
+.product-artisan { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.product-price { font-size: 18px; font-weight: 800; color: var(--primary); }
+.product-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.rating { color: #f59e0b; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+
+.modal {
+  display: none; position: fixed; inset: 0; background: rgba(15, 43, 33, 0.6); backdrop-filter: blur(4px);
+  z-index: 1000; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s;
+}
+.modal.active { display: flex; opacity: 1; }
+.modal-content {
+  background: var(--card); border-radius: 20px; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto;
+  padding: 28px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transform: scale(0.95); transition: transform 0.3s;
+}
+.modal.active .modal-content { transform: scale(1); }
+.modal-close {
+  position: absolute; top: 16px; right: 16px; background: var(--bg); border: 1px solid var(--border);
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; transition: 0.2s;
+}
+.modal-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+.form-input, .form-select {
+  width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px;
+  font-family: inherit; background: var(--card); transition: 0.2s; color: var(--text);
+}
+.form-input:focus, .form-select:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+
+.storytelling {
+  background: linear-gradient(135deg, var(--accent-light), #fef3c7); padding: 20px; border-radius: 14px;
+  margin: 16px 0; font-style: italic; color: #78350f; line-height: 1.7; border-left: 4px solid var(--accent); font-size: 14px;
+}
+
+.toast {
+  position: fixed; top: 90px; right: 24px; background: var(--primary); color: #fff; padding: 14px 20px;
+  border-radius: 12px; box-shadow: var(--shadow-lg); z-index: 2000; display: none; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 500; display: flex; align-items: center; gap: 10px; font-size: 13px;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.toast.show { display: flex; }
+
+.scan-area {
+  border: 2px dashed var(--border); border-radius: 16px; padding: 40px; text-align: center; background: var(--bg);
+  transition: 0.2s; cursor: pointer;
+}
+.scan-area:hover { border-color: var(--primary-light); background: rgba(16, 185, 129, 0.03); }
+.scan-area i { font-size: 48px; color: var(--primary-light); margin-bottom: 12px; }
+
+.qc-item { display: flex; gap: 16px; padding: 16px; background: var(--bg); border-radius: 12px; margin-bottom: 12px; align-items: center; transition: 0.2s; }
+.qc-item:hover { background: #eef2f6; }
+.qc-img {
+  width: 64px; height: 64px; border-radius: 12px; background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; flex-shrink: 0;
+}
+.qc-info { flex: 1; }
+.qc-title { font-weight: 700; margin-bottom: 2px; font-size: 14px; }
+.qc-sub { font-size: 12px; color: var(--text-muted); }
+.qc-actions { display: flex; gap: 8px; }
+
+.split-bar { display: flex; height: 40px; border-radius: 10px; overflow: hidden; margin: 16px 0; box-shadow: var(--shadow-sm); }
+.split-seg { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; }
+
+.wallet-card {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%); color: #fff;
+  padding: 28px; border-radius: 20px; margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.wallet-card::before { content: ""; position: absolute; top: -50%; right: -20%; width: 300px; height: 300px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+.wallet-balance { font-size: 36px; font-weight: 800; margin: 8px 0; letter-spacing: -1px; }
+.wallet-label { font-size: 13px; opacity: 0.8; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+
+#map, #mapRadar { height: 380px; border-radius: 16px; z-index: 1; border: 1px solid var(--border); }
+
+.pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo"><i class="fas fa-recycle"></i><span>BaliLoop</span></div>
+    
+    <div class="role-switcher">
+      <button class="role-btn active" onclick="switchRole('hotel')"><i class="fas fa-hotel"></i> <span data-i18n="role_hotel">Hotel</span></button>
+      <button class="role-btn" onclick="switchRole('umkm')"><i class="fas fa-hands-helping"></i> <span data-i18n="role_umkm">Artisan</span></button>
+      <button class="role-btn" onclick="switchRole('wisatawan')"><i class="fas fa-suitcase"></i> <span data-i18n="role_tourist">Tourist</span></button>
+      <button class="role-btn" onclick="switchRole('admin')"><i class="fas fa-cogs"></i> <span data-i18n="role_admin">Admin</span></button>
+    </div>
+
+    <button class="lang-toggle" onclick="toggleLang()">
+      <i class="fas fa-globe"></i> <span id="langLabel">ID</span>
+    </button>
+
+    <div class="user-info">
+      <div class="avatar" id="userAvatar">H</div>
+      <div class="user-meta">
+        <div class="user-name" id="userName">Hotel Ayana</div>
+        <div class="user-role" id="userRole" data-i18n="role_waste_provider">Waste Provider</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar"></div>
+
+  <!-- MAIN -->
+  <div class="main" id="main"></div>
+</div>
+
+<div class="toast" id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg"></span></div>
+<div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
+
+<script>
+// ============ I18N TRANSLATIONS ============
+const i18n = {
+  id: {
+    role_hotel: "Hotel", role_umkm: "Pengrajin", role_tourist: "Wisatawan", role_admin: "Admin",
+    role_waste_provider: "Penyedia Limbah", role_artisan: "Pengrajin Kriya", role_tourist_desc: "Wisatawan", role_admin_desc: "Operator Platform",
+    nav_ops: "Operasional", nav_analytics: "Analitik & Bisnis", nav_prod: "Produksi", nav_finance: "Keuangan", nav_explore: "Eksplorasi", nav_platform: "Platform",
+    dashboard: "Dasbor Utama", smartbin: "IoT Smart Bin", registry: "Smart Registry", scheduler: "Jadwal Pickup",
+    esg: "ESG Analytics", b2b: "B2B Procurement", radar: "Material Radar", academy: "Upcycle Academy",
+    pos: "Kriya POS", payout: "Digital Payouts", scanner: "QR Scanner", marketplace: "Eco-Marketplace",
+    wallet: "Impact Wallet", overview: "Overview", routing: "Eco-Routing", qc: "QC Gate", payment: "Split Payment",
+    
+    // Common
+    total_waste: "Total Limbah Bulan Ini", co2_saved: "CO₂ Dihemat", active_bins: "Bin Aktif", pickups_today: "Pickup Hari Ini",
+    status_live: "LIVE", schedule: "Jadwalkan", claim: "Klaim", approve: "Setujui", reject: "Tolak", buy: "Beli",
+    artisan: "Pengrajin", logistics: "Logistik", platform_fee: "Platform",
+    success_claim: "Material berhasil diklaim!", success_schedule: "Pickup berhasil dijadwalkan!", success_qc: "Produk disetujui & masuk marketplace!",
+    scan_title: "Upload Foto Limbah", scan_desc: "AI akan mengidentifikasi kategori & estimasi berat", simulate: "Simulasi Scan AI",
+    story_title: "Storytelling Page", claim_points: "Klaim Green Points",
+  },
+  en: {
+    role_hotel: "Hotel", role_umkm: "Artisan", role_tourist: "Tourist", role_admin: "Admin",
+    role_waste_provider: "Waste Provider", role_artisan: "Craft Artisan", role_tourist_desc: "Tourist", role_admin_desc: "Platform Operator",
+    nav_ops: "Operations", nav_analytics: "Analytics & Business", nav_prod: "Production", nav_finance: "Finance", nav_explore: "Explore", nav_platform: "Platform",
+    dashboard: "Main Dashboard", smartbin: "IoT Smart Bin", registry: "Smart Registry", scheduler: "Pick-up Scheduler",
+    esg: "ESG Analytics", b2b: "B2B Procurement", radar: "Material Radar", academy: "Upcycle Academy",
+    pos: "Craft POS", payout: "Digital Payouts", scanner: "QR Scanner", marketplace: "Eco-Marketplace",
+    wallet: "Impact Wallet", overview: "Overview", routing: "Eco-Routing", qc: "QC Gate", payment: "Split Payment",
+    
+    // Common
+    total_waste: "Total Waste This Month", co2_saved: "CO₂ Saved", active_bins: "Active Bins", pickups_today: "Pickups Today",
+    status_live: "LIVE", schedule: "Schedule", claim: "Claim", approve: "Approve", reject: "Reject", buy: "Buy",
+    artisan: "Artisan", logistics: "Logistics", platform_fee: "Platform",
+    success_claim: "Material successfully claimed!", success_schedule: "Pickup successfully scheduled!", success_qc: "Product approved & listed on marketplace!",
+    scan_title: "Upload Waste Photo", scan_desc: "AI will identify category & estimate weight", simulate: "Simulate AI Scan",
+    story_title: "Storytelling Page", claim_points: "Claim Green Points",
+  }
+};
+
+let currentLang = 'id';
+function t(key) { return i18n[currentLang][key] || key; }
+
+function toggleLang() {
+  currentLang = currentLang === 'id' ? 'en' : 'id';
+  document.getElementById('langLabel').textContent = currentLang.toUpperCase();
+  document.documentElement.lang = currentLang;
+  
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  
+  renderSidebar();
+  renderPage();
+}
+
+// ============ STATE ============
+const state = {
+  role: 'hotel',
+  page: 'dashboard',
+  bins: [
+    {id:1, name: {id:'Lobby Utama', en:'Main Lobby'}, type:'glass', icon:'wine-bottle', level:78, weight:12.4, loc: {id:'Lantai 1', en:'Floor 1'}, lastPickup: {id:'2 jam lalu', en:'2 hours ago'}},
+    {id:2, name: {id:'Restoran Seafood', en:'Seafood Restaurant'}, type:'plastic', icon:'wine-glass', level:45, weight:6.2, loc: {id:'Lantai 2', en:'Floor 2'}, lastPickup: {id:'5 jam lalu', en:'5 hours ago'}},
+    {id:3, name: {id:'Spa & Wellness', en:'Spa & Wellness'}, type:'soap', icon:'soap', level:92, weight:8.7, loc: {id:'Lantai 3', en:'Floor 3'}, lastPickup: {id:'1 jam lalu', en:'1 hour ago'}},
+    {id:4, name: {id:'Housekeeping', en:'Housekeeping'}, type:'fabric', icon:'tshirt', level:34, weight:15.1, loc: {id:'Basement', en:'Basement'}, lastPickup: {id:'3 jam lalu', en:'3 hours ago'}}
+  ],
+  products: [
+    {id:1, name: {id:'Sandal Kamar Eksekutif', en:'Executive Room Slippers'}, artisan: {id:'Ibu Yati - Sesetan', en:'Ibu Yati - Sesetan'}, price:85000, material: {id:'Kain seprai bekas 2kg', en:'2kg used bed linen'}, icon:'fa-shoe-prints', rating:4.8},
+    {id:2, name: {id:'Vas Bunga Kaca Artistic', en:'Artistic Glass Vase'}, artisan: {id:'Pak Made - Renon', en:'Pak Made - Renon'}, price:175000, material: {id:'Botol kaca daur ulang', en:'Recycled glass bottles'}, icon:'fa-wine-bottle', rating:4.9},
+    {id:3, name: {id:'Tas Tote Batik Limbah', en:'Upcycled Batik Tote'}, artisan: {id:'Koperasi Sesetan', en:'Sesetan Cooperative'}, price:125000, material: {id:'Kain perca premium', en:'Premium fabric scraps'}, icon:'fa-bag-shopping', rating:4.7},
+    {id:4, name: {id:'Wadah Sabun Organik', en:'Organic Soap Dispenser'}, artisan: {id:'Ibu Nyoman - Kuta', en:'Ibu Nyoman - Kuta'}, price:45000, material: {id:'Plastik HDPE daur ulang', en:'Recycled HDPE plastic'}, icon:'fa-jar', rating:4.6}
+  ],
+  claims: [
+    {id:1, hotel:'Hotel Ayana', material: {id:'Kain seprai 15kg', en:'Bed linen 15kg'}, distance:'2.3 km', reward:75000, time: {id:'10 menit lalu', en:'10 mins ago'}},
+    {id:2, hotel:'Grand Hyatt Kuta', material: {id:'Botol kaca 8kg', en:'Glass bottles 8kg'}, distance:'4.1 km', reward:40000, time: {id:'25 menit lalu', en:'25 mins ago'}}
+  ],
+  qcQueue: [
+    {id:1, artisan:'Ibu Yati', product: {id:'Sandal Kamar Eksekutif', en:'Executive Room Slippers'}, img:'fa-shoe-prints', submitted: {id:'10 menit lalu', en:'10 mins ago'}},
+    {id:2, artisan:'Pak Made', product: {id:'Vas Bunga Kaca', en:'Glass Vase'}, img:'fa-wine-bottle', submitted: {id:'30 menit lalu', en:'30 mins ago'}}
+  ],
+  impact: {tonnage:12.4, carbon:34.2, beneficiaries:147, hotels:23, umkm:58}
+};
+
+const navConfig = {
+  hotel: [
+    {title: 'nav_ops', items: [{id:'dashboard', icon:'fa-gauge-high', label:'dashboard'}, {id:'smartbin', icon:'fa-trash-can', label:'smartbin'}, {id:'registry', icon:'fa-camera', label:'registry'}, {id:'scheduler', icon:'fa-truck', label:'scheduler'}]},
+    {title: 'nav_analytics', items: [{id:'esg', icon:'fa-leaf', label:'esg'}, {id:'b2b', icon:'fa-store', label:'b2b'}]}
+  ],
+  umkm: [
+    {title: 'nav_prod', items: [{id:'dashboard', icon:'fa-gauge-high', label:'dashboard'}, {id:'radar', icon:'fa-map-location-dot', label:'radar'}, {id:'academy', icon:'fa-graduation-cap', label:'academy'}, {id:'pos', icon:'fa-cash-register', label:'pos'}]},
+    {title: 'nav_finance', items: [{id:'payout', icon:'fa-wallet', label:'payout'}]}
+  ],
+  wisatawan: [
+    {title: 'nav_explore', items: [{id:'dashboard', icon:'fa-gauge-high', label:'dashboard'}, {id:'scanner', icon:'fa-qrcode', label:'scanner'}, {id:'marketplace', icon:'fa-bag-shopping', label:'marketplace'}, {id:'wallet', icon:'fa-heart', label:'wallet'}]}
+  ],
+  admin: [
+    {title: 'nav_platform', items: [{id:'dashboard', icon:'fa-gauge-high', label:'overview'}, {id:'routing', icon:'fa-route', label:'routing'}, {id:'qc', icon:'fa-clipboard-check', label:'qc'}, {id:'payment', icon:'fa-money-bill-transfer', label:'payment'}]}
+  ]
+};
+
+const userProfiles = {
+  hotel: {name:'Hotel Ayana', role:'role_waste_provider', avatar:'H'},
+  umkm: {name:'Ibu Yati', role:'role_artisan', avatar:'Y'},
+  wisatawan: {name:'John Doe', role:'role_tourist_desc', avatar:'J'},
+  admin: {name:'Admin', role:'role_admin_desc', avatar:'A'}
+};
+
+// ============ RENDER ENGINE ============
+function switchRole(role) {
+  state.role = role;
+  state.page = 'dashboard';
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  event.target.closest('.role-btn').classList.add('active');
+  
+  const p = userProfiles[role];
+  document.getElementById('userName').textContent = p.name;
+  document.getElementById('userRole').setAttribute('data-i18n', p.role);
+  document.getElementById('userRole').textContent = t(p.role);
+  document.getElementById('userAvatar').textContent = p.avatar;
+  
+  renderSidebar();
+  renderPage();
+}
+
+function renderSidebar() {
+  const nav = navConfig[state.role];
+  let html = '';
+  nav.forEach(group => {
+    html += `<div class="nav-group"><div class="nav-title">${t(group.title)}</div>`;
+    group.items.forEach(item => {
+      html += `<div class="nav-item ${state.page===item.id?'active':''}" onclick="navigate('${item.id}')"><i class="fas ${item.icon}"></i>${t(item.label)}</div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+function navigate(page) {
+  state.page = page;
+  renderSidebar();
+  renderPage();
+}
+
+function renderPage() {
+  const key = `${state.role}_${state.page}`;
+  const renderers = {
+    hotel_dashboard: renderHotelDashboard, hotel_smartbin: renderSmartBin, hotel_registry: renderRegistry,
+    hotel_scheduler: renderScheduler, hotel_esg: renderESG, hotel_b2b: renderB2B,
+    umkm_dashboard: renderUMKMDashboard, umkm_radar: renderRadar, umkm_academy: renderAcademy,
+    umkm_pos: renderPOS, umkm_payout: renderPayout,
+    wisatawan_dashboard: renderWisatawanDashboard, wisatawan_scanner: renderScanner,
+    wisatawan_marketplace: renderMarketplace, wisatawan_wallet: renderWallet,
+    admin_dashboard: renderAdminDashboard, admin_routing: renderRouting, admin_qc: renderQC, admin_payment: renderPayment
+  };
+  document.getElementById('main').innerHTML = `<div class="page active">${(renderers[key] || renderHotelDashboard)()}</div>`;
+  
+  if(key==='hotel_esg') initESGChart();
+  if(key==='umkm_radar') setTimeout(initRadarMap, 100);
+  if(key==='admin_routing') setTimeout(initRoutingMap, 100);
+}
+
+// ============ PAGE RENDERERS (Bilingual & Modern) ============
+function renderHotelDashboard() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('dashboard')}</div>
+      <div class="page-subtitle">Monitor your hotel's waste & sustainability impact in real-time.</div>
+    </div>
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card"><div class="stat-label">${t('total_waste')}</div><div class="stat-value">1,240 kg</div><div class="stat-change"><i class="fas fa-arrow-down"></i> 12% vs last month</div><div class="stat-icon"><i class="fas fa-trash"></i></div></div>
+      <div class="stat-card"><div class="stat-label">${t('co2_saved')}</div><div class="stat-value">342 kg</div><div class="stat-change"><i class="fas fa-arrow-up"></i> 18% improvement</div><div class="stat-icon"><i class="fas fa-leaf"></i></div></div>
+      <div class="stat-card"><div class="stat-label">${t('active_bins')}</div><div class="stat-value">${state.bins.length}</div><div class="stat-change">All systems online</div><div class="stat-icon"><i class="fas fa-wifi"></i></div></div>
+      <div class="stat-card"><div class="stat-label">${t('pickups_today')}</div><div class="stat-value">3</div><div class="stat-change">1 scheduled</div><div class="stat-icon"><i class="fas fa-truck"></i></div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Smart Bin Status <span class="badge badge-success pulse">${t('status_live')}</span></div>
+        ${state.bins.map(b => `
+          <div class="bin-card" style="margin-bottom:12px">
+            <div class="bin-header">
+              <div style="display:flex;gap:12px;align-items:center">
+                <div class="bin-icon ${b.type}"><i class="fas fa-${b.icon}"></i></div>
+                <div><div class="bin-name">${b.name[currentLang]}</div><div class="bin-loc"><i class="fas fa-location-dot"></i> ${b.loc[currentLang]}</div></div>
+              </div>
+              <span class="badge ${b.level>80?'badge-danger':b.level>60?'badge-warning':'badge-success'}">${b.level}%</span>
+            </div>
+            <div class="progress"><div class="progress-bar ${b.level>80?'high':''}" style="width:${b.level}%"></div></div>
+            <div class="bin-meta"><span><i class="fas fa-weight-hanging"></i> ${b.weight} kg</span><span>${b.lastPickup[currentLang]}</span></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Recent Activity</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px;padding:12px;background:var(--bg);border-radius:12px;align-items:center">
+            <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;color:#1e40af;display:flex;align-items:center;justify-content:center"><i class="fas fa-truck"></i></div>
+            <div style="flex:1"><div style="font-weight:600;font-size:13px">Glass waste pickup completed</div><div style="font-size:12px;color:var(--text-muted)">12.4 kg → Pak Made Workshop • 2 hours ago</div></div>
+          </div>
+          <div style="display:flex;gap:12px;padding:12px;background:var(--bg);border-radius:12px;align-items:center">
+            <div style="width:40px;height:40px;border-radius:10px;background:#d1fae5;color:#065f46;display:flex;align-items:center;justify-content:center"><i class="fas fa-camera"></i></div>
+            <div style="flex:1"><div style="font-weight:600;font-size:13px">15 kg bed linen scanned</div><div style="font-size:12px;color:var(--text-muted)">AI: Fabric Category • 3 hours ago</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSmartBin() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('smartbin')}</div>
+      <div class="page-subtitle">Real-time IoT sensor volume monitoring.</div>
+    </div>
+    <div class="grid grid-3" style="margin-bottom:24px">
+      ${state.bins.map(b => `
+        <div class="bin-card">
+          <div class="bin-header">
+            <div style="display:flex;gap:12px;align-items:center">
+              <div class="bin-icon ${b.type}"><i class="fas fa-${b.icon}"></i></div>
+              <div><div class="bin-name">${b.name[currentLang]}</div><div class="bin-loc"><i class="fas fa-location-dot"></i> ${b.loc[currentLang]}</div></div>
+            </div>
+            <span class="badge ${b.level>80?'badge-danger':b.level>60?'badge-warning':'badge-success'}">${b.level}%</span>
+          </div>
+          <div class="progress"><div class="progress-bar ${b.level>80?'high':''}" style="width:${b.level}%"></div></div>
+          <div class="bin-meta"><span><i class="fas fa-weight-hanging"></i> ${b.weight} kg</span><span><i class="fas fa-clock"></i> ${b.lastPickup[currentLang]}</span></div>
+          <button class="btn btn-primary btn-sm" style="width:100%;margin-top:14px" onclick="showToast(t('success_schedule'))"><i class="fas fa-truck"></i> ${t('schedule')}</button>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderRegistry() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('registry')}</div>
+      <div class="page-subtitle">Scan waste with AI for automatic identification.</div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">${t('scan_title')}</div>
+        <div class="scan-area" onclick="simulateScan()">
+          <i class="fas fa-camera"></i>
+          <div style="font-weight:700;margin-bottom:6px;color:var(--text)">Click to capture or upload</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${t('scan_desc')}</div>
+          <button class="btn btn-primary"><i class="fas fa-magic"></i> ${t('simulate')}</button>
+        </div>
+        <div id="scanResult"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Registry History</div>
+        <table>
+          <thead><tr><th>Time</th><th>Category</th><th>Est. Weight</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>10:24</td><td><i class="fas fa-tshirt" style="color:#8b5cf6;margin-right:6px"></i> Fabric</td><td>15.2 kg</td><td><span class="badge badge-success">Claimed</span></td></tr>
+            <tr><td>09:15</td><td><i class="fas fa-wine-bottle" style="color:#3b82f6;margin-right:6px"></i> Glass</td><td>8.7 kg</td><td><span class="badge badge-warning">Pending</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderB2B() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('b2b')}</div>
+      <div class="page-subtitle">Wholesale catalog of upcycled products from local artisans.</div>
+    </div>
+    <div class="marketplace-grid">
+      ${state.products.map(p => `
+        <div class="product-card" onclick="showProductDetail(${p.id})">
+          <div class="product-img"><i class="fas ${p.icon}"></i><div class="product-badge">UPCYCLE</div></div>
+          <div class="product-info">
+            <div class="product-name">${p.name[currentLang]}</div>
+            <div class="product-artisan"><i class="fas fa-user-circle"></i> ${p.artisan[currentLang]}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px"><i class="fas fa-recycle" style="color:var(--primary-light)"></i> ${p.material[currentLang]}</div>
+            <div class="product-footer">
+              <div class="product-price">Rp ${p.price.toLocaleString('id')}</div>
+              <div class="rating"><i class="fas fa-star"></i> ${p.rating}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px" onclick="event.stopPropagation();showToast('Added to B2B cart!')"><i class="fas fa-cart-plus"></i> Wholesale Order</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderUMKMDashboard() {
+  return `
+    <div class="page-header">
+      <div class="page-title">Artisan Dashboard</div>
+      <div class="page-subtitle">Manage production & track nearby material opportunities.</div>
+    </div>
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card"><div class="stat-label">Wallet Balance</div><div class="stat-value">Rp 4.2jt</div><div class="stat-change">+Rp 850rb this week</div><div class="stat-icon"><i class="fas fa-wallet"></i></div></div>
+      <div class="stat-card"><div class="stat-label">Materials Claimed</div><div class="stat-value">23</div><div class="stat-change">This month</div><div class="stat-icon"><i class="fas fa-hand-holding"></i></div></div>
+      <div class="stat-card"><div class="stat-label">Products Sold</div><div class="stat-value">89</div><div class="stat-change">+12% MoM</div><div class="stat-icon"><i class="fas fa-shopping-bag"></i></div></div>
+      <div class="stat-card"><div class="stat-label">Training Completed</div><div class="stat-value">7/12</div><div class="stat-change">Active modules</div><div class="stat-icon"><i class="fas fa-graduation-cap"></i></div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Nearby Material Opportunities <span class="badge badge-warning">2 New</span></div>
+        ${state.claims.map(c => `
+          <div style="display:flex;justify-content:space-between;padding:14px;background:var(--bg);border-radius:12px;margin-bottom:10px;align-items:center;border:1px solid transparent;transition:0.2s" onmouseover="this.style.borderColor='var(--primary-light)'" onmouseout="this.style.borderColor='transparent'">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px;color:var(--text)">${c.hotel}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin:4px 0">${c.material[currentLang]} • ${c.distance}</div>
+              <div style="font-size:12px;color:var(--primary);font-weight:600">Reward: Rp ${c.reward.toLocaleString('id')}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showToast(t('success_claim'))"><i class="fas fa-hand-pointer"></i> ${t('claim')}</button>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Incoming Orders</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;padding:14px;background:var(--bg);border-radius:12px">
+            <div><div style="font-weight:700;font-size:13px">ORD-001</div><div style="font-size:12px;color:var(--text-muted)">Executive Slippers x50</div></div>
+            <div style="text-align:right"><div style="font-weight:800;color:var(--primary)">Rp 4.25jt</div><span class="badge badge-info">Shipped</span></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:14px;background:var(--bg);border-radius:12px">
+            <div><div style="font-weight:700;font-size:13px">ORD-002</div><div style="font-size:12px;color:var(--text-muted)">Soap Dispenser x100</div></div>
+            <div style="text-align:right"><div style="font-weight:800;color:var(--primary)">Rp 4.5jt</div><span class="badge badge-warning">Processing</span></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderRadar() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('radar')}</div>
+      <div class="page-subtitle">Interactive map of hotel waste around your location.</div>
+    </div>
+    <div class="card">
+      <div id="mapRadar"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="badge badge-success"><i class="fas fa-circle" style="font-size:8px"></i> Fabric</span>
+        <span class="badge badge-info"><i class="fas fa-circle" style="font-size:8px"></i> Glass</span>
+        <span class="badge badge-warning"><i class="fas fa-circle" style="font-size:8px"></i> Plastic</span>
+        <span class="badge badge-danger"><i class="fas fa-circle" style="font-size:8px"></i> Soap</span>
+      </div>
+    </div>`;
+}
+
+function renderScanner() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('scanner')}</div>
+      <div class="page-subtitle">Scan product QR to reveal its transparent backstory.</div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="scan-area">
+          <i class="fas fa-qrcode"></i>
+          <div style="font-weight:700;margin-bottom:6px;color:var(--text)">Point camera at QR Code</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Or select a product to simulate</div>
+          <select class="form-select" id="qrSelect" style="margin-bottom:12px">
+            ${state.products.map(p => `<option value="${p.id}">${p.name[currentLang]}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary" onclick="scanQR()"><i class="fas fa-search"></i> Scan Now</button>
+        </div>
+      </div>
+      <div class="card" id="storyResult">
+        <div style="text-align:center;padding:40px;color:var(--text-muted)">
+          <i class="fas fa-qrcode" style="font-size:56px;opacity:0.2;margin-bottom:12px"></i>
+          <div>Scan a QR code to reveal the product's journey</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderMarketplace() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('marketplace')}</div>
+      <div class="page-subtitle">Buy upcycled products directly from Bali's local artisans.</div>
+    </div>
+    <div class="card" style="margin-bottom:24px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <input class="form-input" placeholder="Search products..." style="flex:1;min-width:200px">
+        <select class="form-select" style="width:160px"><option>All Categories</option><option>Fashion</option><option>Decor</option></select>
+        <button class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+      </div>
+    </div>
+    <div class="marketplace-grid">
+      ${state.products.map(p => `
+        <div class="product-card" onclick="showProductDetail(${p.id})">
+          <div class="product-img"><i class="fas ${p.icon}"></i><div class="product-badge">ECO</div></div>
+          <div class="product-info">
+            <div class="product-name">${p.name[currentLang]}</div>
+            <div class="product-artisan"><i class="fas fa-user-circle"></i> ${p.artisan[currentLang]}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px"><i class="fas fa-recycle" style="color:var(--primary-light)"></i> ${p.material[currentLang]}</div>
+            <div class="product-footer">
+              <div class="product-price">Rp ${p.price.toLocaleString('id')}</div>
+              <div class="rating"><i class="fas fa-star"></i> ${p.rating}</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();buyProduct(${p.id})"><i class="fas fa-shopping-cart"></i> ${t('buy')}</button>
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showToast('Added to wishlist!')"><i class="fas fa-heart"></i></button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderQC() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('qc')}</div>
+      <div class="page-subtitle">Verify artisan products before marketplace listing.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">QC Queue <span class="badge badge-warning">${state.qcQueue.length} items</span></div>
+      ${state.qcQueue.map(q => `
+        <div class="qc-item">
+          <div class="qc-img"><i class="fas ${q.img}"></i></div>
+          <div class="qc-info">
+            <div class="qc-title">${q.product[currentLang]}</div>
+            <div class="qc-sub">By: ${q.artisan} • Submitted ${q.submitted[currentLang]}</div>
+          </div>
+          <div class="qc-actions">
+            <button class="btn btn-primary btn-sm" style="background:var(--success)" onclick="qcAction(${q.id})"><i class="fas fa-check"></i> ${t('approve')}</button>
+            <button class="btn btn-secondary btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="showToast('Product rejected. Feedback sent.')"><i class="fas fa-times"></i> ${t('reject')}</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderPayment() {
+  return `
+    <div class="page-header">
+      <div class="page-title">${t('payment')}</div>
+      <div class="page-subtitle">Automated revenue distribution via smart contracts.</div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Default Split Structure</div>
+      <div class="split-bar">
+        <div class="split-seg" style="background:var(--primary);flex:7">70% ${t('artisan')}</div>
+        <div class="split-seg" style="background:var(--accent);flex:2">20% ${t('logistics')}</div>
+        <div class="split-seg" style="background:var(--primary-mid);flex:1">10% ${t('platform_fee')}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Transactions</div>
+      <table>
+        <thead><tr><th>ID</th><th>Buyer</th><th>Product</th><th>Total</th><th>Artisan (70%)</th><th>Logistics (20%)</th><th>Platform (10%)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>TX-1001</strong></td><td>John D.</td><td>Executive Slippers</td><td><strong>Rp 85,000</strong></td><td style="color:var(--success)">Rp 59,500</td><td style="color:#92400e">Rp 17,000</td><td style="color:#1e40af">Rp 8,500</td></tr>
+          <tr><td><strong>TX-1002</strong></td><td>Sarah L.</td><td>Glass Vase</td><td><strong>Rp 175,000</strong></td><td style="color:var(--success)">Rp 122,500</td><td style="color:#92400e">Rp 35,000</td><td style="color:#1e40af">Rp 17,500</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// Placeholder renderers for other pages to keep file size manageable while demonstrating structure
+function renderScheduler() { return `<div class="page-header"><div class="page-title">${t('scheduler')}</div></div><div class="card"><p>Pickup scheduling interface with map integration.</p></div>`; }
+function renderESG() { return `<div class="page-header"><div class="page-title">${t('esg')}</div></div><div class="grid grid-2"><div class="card"><canvas id="esgChart"></canvas></div><div class="card"><canvas id="trendChart"></canvas></div></div>`; }
+function renderAcademy() { return `<div class="page-header"><div class="page-title">${t('academy')}</div></div><div class="card"><p>Interactive video and PDF training modules for artisans.</p></div>`; }
+function renderPOS() { return `<div class="page-header"><div class="page-title">${t('pos')}</div></div><div class="card"><p>Digital inventory and production management system.</p></div>`; }
+function renderPayout() { return `<div class="page-header"><div class="page-title">${t('payout')}</div></div><div class="wallet-card"><div class="wallet-label">Available Balance</div><div class="wallet-balance">Rp 4,250,000</div><button class="btn btn-accent" style="margin-top:16px" onclick="showToast('Withdrawal successful!')"><i class="fas fa-money-bill-transfer"></i> Withdraw Now</button></div>`; }
+function renderWisatawanDashboard() { return `<div class="page-header"><div class="page-title">Welcome to BaliLoop! 🌴</div></div><div class="grid grid-3"><div class="stat-card"><div class="stat-label">Green Points</div><div class="stat-value">1,240</div><div class="stat-change">Level: Eco Warrior</div></div></div>`; }
+function renderWallet() { return `<div class="page-header"><div class="page-title">${t('wallet')}</div></div><div class="grid grid-2"><div class="stat-card"><div class="stat-label">Total Impact</div><div class="stat-value">4.2 kg</div><div class="stat-change">Plastic saved</div></div></div>`; }
+function renderAdminDashboard() { return `<div class="page-header"><div class="page-title">Platform Overview</div></div><div class="grid grid-4"><div class="stat-card"><div class="stat-label">Registered Hotels</div><div class="stat-value">${state.impact.hotels}</div></div><div class="stat-card"><div class="stat-label">Active Artisans</div><div class="stat-value">${state.impact.umkm}</div></div></div>`; }
+function renderRouting() { return `<div class="page-header"><div class="page-title">${t('routing')}</div></div><div class="card"><div id="mapRouting" style="height:380px;border-radius:16px"></div></div>`; }
+
+// ============ ACTIONS ============
+function simulateScan() {
+  const categories = [
+    {name: {id:'Kain Seprai Bekas', en:'Used Bed Linen'}, cat:'fabric', weight:'15.2 kg', icon:'fa-tshirt', color:'#8b5cf6'},
+    {name: {id:'Botol Kaca Minuman', en:'Beverage Glass Bottles'}, cat:'glass', weight:'8.7 kg', icon:'fa-wine-bottle', color:'#3b82f6'}
+  ];
+  const c = categories[Math.floor(Math.random()*categories.length)];
+  document.getElementById('scanResult').innerHTML = `
+    <div style="margin-top:16px;padding:16px;background:rgba(16,185,129,0.08);border-radius:12px;border-left:4px solid var(--primary-light);animation:fadeUp 0.3s">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div style="width:48px;height:48px;border-radius:10px;background:${c.color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px"><i class="fas ${c.icon}"></i></div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:var(--primary)">${c.name[currentLang]}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Category: ${c.cat.toUpperCase()} • Est. Weight: ${c.weight}</div>
+          <div style="font-size:12px;color:var(--primary-light);margin-top:4px;font-weight:600">✓ AI Confidence: 96.4%</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px;width:100%" onclick="showToast('Waste registered to registry!')"><i class="fas fa-plus"></i> Register to Registry</button>
+    </div>`;
+}
+
+function scanQR() {
+  const id = document.getElementById('qrSelect').value;
+  const p = state.products.find(x => x.id == id);
+  document.getElementById('storyResult').innerHTML = `
+    <div style="animation:fadeUp 0.4s">
+      <div style="text-align:center;padding:24px;background:linear-gradient(135deg,var(--primary-light),var(--primary));border-radius:16px;color:#fff;margin-bottom:16px">
+        <i class="fas ${p.icon}" style="font-size:56px;margin-bottom:12px"></i>
+        <div style="font-size:20px;font-weight:800">${p.name[currentLang]}</div>
+        <div style="font-size:13px;opacity:0.9;margin-top:4px">${p.artisan[currentLang]}</div>
+      </div>
+      <div class="storytelling">
+        "This ${p.name[currentLang].toLowerCase()} is crafted from ${p.material[currentLang].toLowerCase()}, rescued from Hotel Ayana on November 10, 2026, and sewn with care by ${p.artisan[currentLang].split(' - ')[0]} in their local workshop."
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+        <div style="padding:14px;background:var(--bg);border-radius:12px;text-align:center"><div style="font-size:11px;color:var(--text-muted);font-weight:600">WASTE SAVED</div><div style="font-weight:800;color:var(--primary);font-size:18px;margin-top:4px">2.0 kg</div></div>
+        <div style="padding:14px;background:var(--bg);border-radius:12px;text-align:center"><div style="font-size:11px;color:var(--text-muted);font-weight:600">CO₂ SAVED</div><div style="font-weight:800;color:var(--primary);font-size:18px;margin-top:4px">1.2 kg</div></div>
+        <div style="padding:14px;background:var(--bg);border-radius:12px;text-align:center"><div style="font-size:11px;color:var(--text-muted);font-weight:600">DATE</div><div style="font-weight:800;color:var(--primary);font-size:18px;margin-top:4px">10 Nov</div></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:16px;padding:14px" onclick="showToast('+50 Green Points added!')"><i class="fas fa-leaf"></i> ${t('claim_points')}</button>
+    </div>`;
+}
+
+function showProductDetail(id) {
+  const p = state.products.find(x => x.id === id);
+  document.getElementById('modalContent').innerHTML = `
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div style="text-align:center;padding:40px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:16px;color:var(--primary);margin-bottom:20px">
+      <i class="fas ${p.icon}" style="font-size:72px"></i>
+    </div>
+    <h2 style="margin-bottom:4px;font-size:22px">${p.name[currentLang]}</h2>
+    <div style="color:var(--text-muted);margin-bottom:16px;font-size:14px"><i class="fas fa-user-circle"></i> ${p.artisan[currentLang]}</div>
+    <div style="padding:16px;background:rgba(16,185,129,0.08);border-radius:12px;margin-bottom:16px;border:1px solid rgba(16,185,129,0.2)">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px">RAW MATERIAL</div>
+      <div style="font-weight:700;color:var(--primary);margin-top:4px;font-size:15px"><i class="fas fa-recycle" style="color:var(--primary-light)"></i> ${p.material[currentLang]}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:20px;align-items:flex-end">
+      <div><div style="font-size:11px;color:var(--text-muted);font-weight:700">PRICE</div><div style="font-size:26px;font-weight:800;color:var(--primary)">Rp ${p.price.toLocaleString('id')}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--text-muted);font-weight:700">RATING</div><div style="font-size:20px;font-weight:800;color:#f59e0b"><i class="fas fa-star"></i> ${p.rating}</div></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1;padding:14px;font-size:15px" onclick="buyProduct(${p.id});closeModal()"><i class="fas fa-shopping-cart"></i> Buy Now</button>
+      <button class="btn btn-secondary" style="padding:14px" onclick="closeModal()">Close</button>
+    </div>`;
+  document.getElementById('modal').classList.add('active');
+}
+
+function buyProduct(id) {
+  const p = state.products.find(x => x.id === id);
+  showToast(`Successfully purchased ${p.name[currentLang]}! +${Math.floor(p.price/1000)} Green Points.`);
+}
+
+function qcAction(id) {
+  state.qcQueue = state.qcQueue.filter(q => q.id !== id);
+  renderPage();
+  showToast(t('success_qc'));
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+function showToast(msg) {
+  const tEl = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  tEl.classList.add('show');
+  setTimeout(() => tEl.classList.remove('show'), 3000);
+}
+
+// ============ CHARTS & MAPS ============
+function initESGChart() {
+  const ctx1 = document.getElementById('esgChart');
+  if(ctx1) new Chart(ctx1, {type:'doughnut', data:{labels:['Fabric','Glass','Plastic','Soap','Other'], datasets:[{data:[35,25,22,12,6], backgroundColor:['#8b5cf6','#3b82f6','#f59e0b','#ec4899','#6b7280']}]}, options:{plugins:{legend:{position:'bottom'}}, cutout:'70%'}});
+  
+  const ctx2 = document.getElementById('trendChart');
+  if(ctx2) new Chart(ctx2, {type:'line', data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'], datasets:[{label:'Tonnage (kg)', data:[420,510,580,640,720,810,890,980,1050,1150,1240], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, tension:0.4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+}
+
+function initRadarMap() {
+  const map = L.map('mapRadar').setView([-8.6705, 115.2126], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+  const hotels = [
+    {name:'Hotel Ayana', lat:-8.7200, lng:115.1689, type:'Fabric', color:'#8b5cf6'},
+    {name:'Grand Hyatt', lat:-8.7450, lng:115.1720, type:'Glass', color:'#3b82f6'},
+    {name:'Your Workshop', lat:-8.6900, lng:115.1900, type:'You', color:'#10b981'}
+  ];
+  hotels.forEach(h => {
+    const icon = L.divIcon({className:'', html:`<div style="background:${h.color};width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700"><i class="fas fa-${h.type==='You'?'home':'map-pin'}"></i></div>`, iconSize:[32,32]});
+    L.marker([h.lat, h.lng], {icon}).addTo(map).bindPopup(`<b>${h.name}</b><br>Type: ${h.type}`);
+  });
+}
+
+function initRoutingMap() {
+  const mapEl = document.getElementById('mapRouting');
+  if(!mapEl) return;
+  const map = L.map(mapEl).setView([-8.6705, 115.2126], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+  const points = [[-8.7200,115.1689], [-8.7450,115.1720], [-8.7850,115.1650]];
+  L.polyline(points, {color:'#10b981', weight:4, dashArray:'10, 10'}).addTo(map);
+  points.forEach((p, i) => L.marker(p).addTo(map).bindPopup(`Stop ${i+1}`));
+}
+
+// ============ INIT ============
+renderSidebar();
+renderPage();
+
+// Real-time bin simulation
+setInterval(() => {
+  state.bins.forEach(b => {
+    b.level = Math.min(100, b.level + Math.floor(Math.random()*2));
+    if(b.level >= 95) b.level = 20 + Math.floor(Math.random()*30);
+  });
+  if(state.page === 'smartbin' || state.page === 'dashboard') renderPage();
+}, 10000);
+</script>
+</body>
+</html>
